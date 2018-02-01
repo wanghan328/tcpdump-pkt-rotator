@@ -99,7 +99,7 @@ int read_header() {
     assert(read_length == sizeof(header));
     assert(header.magic == PACKET_HEADER_MAGIC);
     assert(header.packet_size <= PACKET_LENGTH_MAX);
-    
+
     printf("[packet] header: version=%d.%u, packet_size=%u, frame_type=%u\n", 
         header.ver_major, header.ver_minor, header.packet_size, header.frame_type);
     write_file("output.00000", &header, sizeof(header), NULL);
@@ -118,6 +118,7 @@ int read_packet() {
         if (packet == NULL) {
             return 1;
         }
+        rb_length = ring_buffer_length(rb);
     }
 
     if (rb_length < sizeof(*packet)) {
