@@ -6,10 +6,12 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #include "ring_buffer.h"
 #include "packet.h"
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define LOG_FILE_SIZE (1024 * 1024 + PACKET_LENGTH_MAX)
 #define RING_BUF_SIZE (1.2 * PACKET_LENGTH_MAX)
 
@@ -97,12 +99,14 @@ int read_header() {
     assert(read_length == sizeof(header));
     assert(header.magic == PACKET_HEADER_MAGIC);
     assert(header.packet_size <= PACKET_LENGTH_MAX);
+    
+    printf("[packet] header: version=%d.%u, packet_size=%u, frame_type=%u\n", 
+        header.ver_major, header.ver_minor, header.packet_size, header.frame_type);
     write_file("output.00000", &header, sizeof(header), NULL);
 
     packet = malloc(sizeof(*packet) + header.packet_size);
     assert(packet);
-    printf("[packet] header: version=%d.%u, packet_size=%u, frame_type=%u\n", 
-        header.ver_major, header.ver_minor, header.packet_size, header.frame_type);
+
     return 0;
 }
 
@@ -156,8 +160,30 @@ int write_block() {
     return 0;
 }
 
-int main()
+void signal_install() {
+    signal(SIGINT, SIG_IGN);
+}
+
+#define OPTSTR "n:sh?"
+static int parse_opt(int argc, char *argv[]) {
+    int ch;
+    while (-1 != (ch = getopt(argc, argv, OPTSTR))) {
+        switch (ch) {
+        case 'n': limit = MAX(1, atoi(optarg));     break;
+        case 's': signal_install();                 break;
+        case 'h':
+        case '?': printf("usage:         argv[0] -n <number> -s\n"
+                    "-n <number>    keep <number> blocks at most, default 5.\n"
+                    "-s             ommit signal CTRL-C, default not ommit.\n");
+        default : exit(0);
+        }
+    }
+    return 0;
+}
+
+int main(int argc, char *argv[])
 {
+    parse_opt(argc, argv);
     rb = ring_buffer_new(RING_BUF_SIZE);
 
     for (;;) {
@@ -175,7 +201,7 @@ int main()
             size_t rb_length = ring_buffer_length(rb);
             output_block();
             printf("[main  ] finished, packet_cnt=%d, rb_left=%d\n", packet_cnt, (int)rb_length);
-            assert(rb_length == 0);
+            // assert(rb_length == 0); // will fail if read from courrpted file.
             break;
         }
     }
