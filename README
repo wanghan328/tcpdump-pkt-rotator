@@ -1,12 +1,14 @@
-description
+1. description
 pkt-rotator is a tool keep the last part of a tcpdump file.
+pkt-rotator supports the Linux and Android platform.
+you can find the binarys in directory bin.
 
-usage:
-
-1. pass the packet content to pkt-rotator:
+2. usage:
+2.1. pass the packet content to pkt-rotator:
 1) for live dump    : tcpdump -i any -w - | ./pkt-rotator -s -n 20
 2) for truncate file: ./pkt-rotator -n 50 < dump.cap
 
-2. collect the outputs:
+2.2. collect the outputs:
 cat output.* > last.cap
 the last.cap is the final result; you can use tools like wireshark to analysis it.
+
